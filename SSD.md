@@ -69,7 +69,7 @@ SSD用6个feature map分别对一张图的物体进行识别。这多个尺度�
 
 重要的几点：
 - tf_ssd_bboxes_encode_layer为计算一层feature map的label（位置和类别）
-- label，bboxs为一张图片中所有物体的label和box
+- labels，bboxs为一张图片中所有物体的label和box
 - jaccard_with_anchors函数为：计算一个物体的box与所有default box的IOU，shape为：\[38,38,4]。
 - condition 函数为判断是否所有的物体已经循环完了
 - body 函数为将一个GT框分配给所有符合要求的default box
@@ -248,7 +248,122 @@ def tf_ssd_bboxes_encode(labels,#ground truth标签，1D tensor
             scope=scope)
 ```
 
+# loss的计算
+计算loss需要下列成分：
+- logits：6个分数预测
+- locations：6个位置预测
+- gclasses： 类别标签
+- glocations：位置标签
+- gscores：mask用于标定哪些default box被分配了真实框
+- negative_ratio：负样本/正样本
+- match_threshold: 分配阈值（IOU大于此阈值的default box才被分配真实框）
+```python
+    def losses(self, logits, localisations,
+               gclasses, glocalisations, gscores,
+               match_threshold=0.5,
+               negative_ratio=3.,
+               alpha=1.,
+               label_smoothing=0.,
+               scope='ssd_losses'):
+        """Define the SSD network losses.
+        """
+        return ssd_losses(logits, localisations,
+                          gclasses, glocalisations, gscores,
+                          match_threshold=match_threshold,
+                          negative_ratio=negative_ratio,
+                          alpha=alpha,
+                          label_smoothing=label_smoothing,
+                          scope=scope)
 
+```
+计算loss的过程如下：
+- 1.先将所有的多维向量变换成1维。如logits为一个长度为6的list，而每个元素又是一个\[batch_size,w,h,num_anchor,num_class]的tensor。我们将其展开为一个\[N,num_class]的tensor。这一步是为了方便计算。
+- 2.计算正样本的mask，由之前传入的gscores可以直接计算得到。
+- 3.计算负样本的mask，并进行hard negative mining。简单来说就是负样本太多会导致loss被负样本主导，我们需要选取出其中一些有难度的负样本来计算loss。
+    * 3.1用正样本的mask计算出负样本的mask
+    * 3.2计算出负样本应该有的数量(1.本来有的数量，2.由正样本的数量和negative_ratio计算出的数量。计算1、2的最小值就为负样本应有的数量)num_neg
+    * 3.3 然后根据logits计算出为背景框的概率，选取概率最小的前num_neg个负样本为真正要计算loss的负样本。（概率最小表示模型觉得为非背景，但是它就是背景）
+- 4. 有了pmask和nmask之后，就可以开始计算loss了，这里计算两类loss：1.类别 2.localization
+    * 4.1 类别的loss正负样本都需要计算
+    * 4.2 localization的loss只有正样本才需要计算。
+```python
+def ssd_losses(logits, localisations,
+               gclasses, glocalisations, gscores,
+               match_threshold=0.5,
+               negative_ratio=3.,
+               alpha=1.,
+               label_smoothing=0.,
+               device='/cpu:0',
+               scope=None):
+    with tf.name_scope(scope, 'ssd_losses'):
+        lshape = tfe.get_shape(logits[0], 5)
+        num_classes = lshape[-1]
+        batch_size = lshape[0]
 
+        # Flatten out all vectors!
+        flogits = []
+        fgclasses = []
+        fgscores = []
+        flocalisations = []
+        fglocalisations = []
+        for i in range(len(logits)):
+            flogits.append(tf.reshape(logits[i], [-1, num_classes]))
+            fgclasses.append(tf.reshape(gclasses[i], [-1]))
+            fgscores.append(tf.reshape(gscores[i], [-1]))
+            flocalisations.append(tf.reshape(localisations[i], [-1, 4]))
+            fglocalisations.append(tf.reshape(glocalisations[i], [-1, 4]))
+        # And concat the crap!
+        logits = tf.concat(flogits, axis=0)
+        gclasses = tf.concat(fgclasses, axis=0)
+        gscores = tf.concat(fgscores, axis=0)
+        localisations = tf.concat(flocalisations, axis=0)
+        glocalisations = tf.concat(fglocalisations, axis=0)
+        dtype = logits.dtype
 
+        # Compute positive matching mask...
+        pmask = gscores > match_threshold
+        fpmask = tf.cast(pmask, dtype)
+        n_positives = tf.reduce_sum(fpmask)
 
+        # Hard negative mining...
+        no_classes = tf.cast(pmask, tf.int32)
+        predictions = slim.softmax(logits)
+        nmask = tf.logical_and(tf.logical_not(pmask),
+                               gscores > -0.5)
+        fnmask = tf.cast(nmask, dtype)
+        nvalues = tf.where(nmask,
+                           predictions[:, 0],
+                           1. - fnmask)
+        nvalues_flat = tf.reshape(nvalues, [-1])
+        # Number of negative entries to select.
+        max_neg_entries = tf.cast(tf.reduce_sum(fnmask), tf.int32)
+        n_neg = tf.cast(negative_ratio * n_positives, tf.int32) + batch_size
+        n_neg = tf.minimum(n_neg, max_neg_entries)
+
+        val, idxes = tf.nn.top_k(-nvalues_flat, k=n_neg)
+        max_hard_pred = -val[-1]
+        # Final negative mask.
+        nmask = tf.logical_and(nmask, nvalues < max_hard_pred)
+        fnmask = tf.cast(nmask, dtype)
+
+        # Add cross-entropy loss.
+        with tf.name_scope('cross_entropy_pos'):
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
+                                                                  labels=gclasses)
+            loss = tf.div(tf.reduce_sum(loss * fpmask), batch_size, name='value')
+            tf.losses.add_loss(loss)
+
+        with tf.name_scope('cross_entropy_neg'):
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
+                                                                  labels=no_classes)
+            loss = tf.div(tf.reduce_sum(loss * fnmask), batch_size, name='value')
+            tf.losses.add_loss(loss)
+
+        # Add localization loss: smooth L1, L2, ...
+        with tf.name_scope('localization'):
+            # Weights Tensor: positive mask + random negative.
+            weights = tf.expand_dims(alpha * fpmask, axis=-1)
+            loss = custom_layers.abs_smooth(localisations - glocalisations)
+            loss = tf.div(tf.reduce_sum(loss * weights), batch_size, name='value')
+tf.losses.add_loss(loss)
+```
