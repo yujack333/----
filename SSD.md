@@ -1,8 +1,9 @@
-读过SSD源码后，这里主要总结3点：
+读过SSD源码后，这里主要总结4点：
 - 网络结构
 - 与网络结构匹配的label
 - loss的计算
-
+- 预测过程
+前3点结合起来就是训练，1、4为测试和预测。
 # 网络结构
 ![](picture/ssd_network.png )
 
@@ -365,5 +366,7 @@ def ssd_losses(logits, localisations,
             weights = tf.expand_dims(alpha * fpmask, axis=-1)
             loss = custom_layers.abs_smooth(localisations - glocalisations)
             loss = tf.div(tf.reduce_sum(loss * weights), batch_size, name='value')
-tf.losses.add_loss(loss)
+            tf.losses.add_loss(loss)
 ```
+# 预测过程
+预测过程分为3步：1.由网络预测出`类别`和`位置偏移量`，并生成default box。2.由`位置的偏移量`来调整default box的位置，生成的box进行裁剪（将超出图片的部分裁剪掉）。3.由类别的预测来选出正样本，并根据正样本的概率进行降序排列（为NMS做准备）。非极大抑制输出`类别`，`概率`和`框的位置`。
