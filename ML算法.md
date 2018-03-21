@@ -1,3 +1,9 @@
+总结的相关算法如下：
+- 1.逻辑回归
+- 2.lasso方法
+
+
+
 # logistic regression model
 ## 模型
 
@@ -19,3 +25,8 @@
 ### 更新公式
 
   ![](https://latex.codecogs.com/gif.latex?%5Ctheta_%7Bj%7D%20%3A%3D%5Ctheta_%7Bj%7D-%20%5Cfrac%7B%5Cpartial%7D%7B%5Cpartial%5Ctheta%5E%7Bj%7D%7DJ%28%5Ctheta%29%3D%5Ctheta_%7Bj%7D-%5Cfrac%7B1%7D%7Bm%7D%5Csum%5Climits_%7Bk%3D1%7D%5E%7Bm%7D%28h_%7B%5Ctheta%7D%28x_k%29-y_k%29x_k%5Ej)
+  
+# lasso方法
+  lasso方法是一种特征选择的方法，他需要结合任务或者说是其它模型来一起求解。在这里举一个线性回归的例子来说明。
+## 模型:
+  
