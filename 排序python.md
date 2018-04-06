@@ -1,5 +1,5 @@
+``` python
 import numpy as np
-
 
 def bouble_sort(array):
     for i in range(len(array)-1):
@@ -110,3 +110,4 @@ def radix_sort(array):
 
 a = np.random.randint(0,300,(16))
 b = radix_sort(list(a))
+``` 
