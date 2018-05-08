@@ -2,7 +2,8 @@
 - 1.逻辑回归
 - 2.lasso方法
 - 3.树方法
-
+- 4.softmax+cross_entropy 
+ 
 
 # logistic regression model
 ## 模型
@@ -64,4 +65,5 @@
 - Gradient Boosting 是一种 Boosting 的思想，它本质是，每一次建立模型是在之前建立模型损失函数的梯度下降方向。其步骤如下:
 ![](https://pic4.zhimg.com/80/v2-c75f66da84db9f86f4191903d1d156d9_hd.jpg)
 
-
+# softmax+cross_entropy
+![推倒过程](https://blog.csdn.net/u014380165/article/details/77284921)
