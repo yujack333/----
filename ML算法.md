@@ -3,7 +3,7 @@
 - 2.lasso方法
 - 3.树方法
 - 4.softmax+cross_entropy 
- 
+- 5 SVM和逻辑回归有什么不同
 
 # logistic regression model
 ## 模型
@@ -67,3 +67,11 @@
 
 # softmax+cross_entropy
 ![推倒过程](https://blog.csdn.net/u014380165/article/details/77284921)
+
+# SVM和逻辑回归有什么不同
+- 1.损失函数不一样，逻辑回归的损失函数是log loss，svm的损失函数是hinge loss
+- 2.损失函数的优化方法不一样，逻辑回归用剃度下降法优化，svm用smo方法进行优化
+- 3.逻辑回归侧重于所有点，svm侧重于超平面边缘的点
+- 4.svm的基本思想是在样本点中找到一个最好的超平面
+
+
