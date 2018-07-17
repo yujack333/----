@@ -28,9 +28,12 @@ yolo v2 基于 v1做了以下的尝试性的实验：
 
 ## 文章中没写的
 文章中有两个部分没有些：
+
 1.true bbox怎么分配给anchor
+
 2.loss function
- 对于第一个问题：
+
+对于第一个问题：
  分配方法为：true bbox落在哪个cell，则这个cell就负责detect这个true box。进一步，5个anchor与 true box算IOU，IOU最大的anchor负责预测这个true bbox。也就是说一个 true bbox分配到一个anchor。
  
 ```python
@@ -45,5 +48,10 @@ best_box = tf.to_float(tf.equal(iou, tf.reduce_max(iou, axis=-1, keep_dims=True)
 confs = tf.expand_dims(best_box * response, axis = 4)
 # 最后confs的输出为[batch,cell_size,cell_size,box_per_cell,1]
 ```
- 
+对于第二个问题：
 
+这里先给出loss functuin:
+
+![](/picture/yolo_v2_6.jpg)
+
+- 第一项为背景的loss，背景的判定为：预测框与所有的true bbox的IOU都小于一个阈值。这里的阈值为0.6.这里计算
