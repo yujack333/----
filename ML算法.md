@@ -15,7 +15,9 @@
 
   ![](https://latex.codecogs.com/gif.latex?cost%28h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%2Cy_%7Bi%7D%29%3Dy_%7Bi%7Dlog%28h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%29&plus;%281-y_%7Bi%7D%29log%281-h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%29)
 ### 总体的loss function：
-
+  ![](/picture/logistic.png)
+  
+  
   ![](https://latex.codecogs.com/gif.latex?J%28%5Ctheta%29%3D-%7B1%5Cover%7Bn%7D%7D%5Csum_%7Bi%3D1%7D%5En%5Bcost%28h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%2Cy_%7Bi%7D%29%3Dy_%7Bi%7Dlog%28h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%29&plus;%281-y_%7Bi%7D%29log%281-h_%7B%5Ctheta%7D%28x_%7Bi%7D%29%29%5D)
 
 ## 优化
