@@ -1,0 +1,15 @@
+### 7. Training
+
+#### 7.1 Data preparation 
+
+(1) annotation file
+
+Generate `train.txt/val.txt/test.txt` files under `./data/my_data/` directory. One line for one image, in the format like `image_index image_absolute_path box_1 box_2 ... box_n`. Box_x format: `label_index x_min y_min x_max y_max`. (The origin of coordinates is at the left top corner.) `image_index` is the line index which starts from zero. `label_index` is in range [0, class_num - 1].
+
+For example:
+
+```
+0 xxx/xxx/a.jpg 0 453 369 473 391 1 588 245 608 268
+1 xxx/xxx/b.jpg 1 466 403 485 422 2 793 300 809 320
+...
+```
